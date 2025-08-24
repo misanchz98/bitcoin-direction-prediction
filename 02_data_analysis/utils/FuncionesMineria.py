@@ -301,29 +301,42 @@ def Vcramer(v, target):
     
 def graficoVcramer(matriz, target):
     """
-    Genera un gráfico de barras horizontales que muestra el coeficiente V de Cramer entre cada columna de matriz y la variable target.
+    Genera un gráfico de barras horizontales que muestra el coeficiente V de Cramer
+    entre cada columna de matriz y la variable target, incluyendo el valor numérico encima de la barra.
 
     Datos de entrada:
     - matriz: DataFrame con las variables a comparar.
     - target: Serie de la variable objetivo (categórica).
 
     Datos de salida:
-    - Gráfico de barras horizontales que muestra el coeficiente V de Cramer para cada variable.
+    - Gráfico de barras horizontales con valores de V de Cramer.
     """
 
     # Calcula el coeficiente V de Cramer para cada columna de matriz y target
     salidaVcramer = {x: Vcramer(matriz[x], target) for x in matriz.columns}
 
-    # Ordena los resultados en orden descendente por el coeficiente V de Cramer
+    # Ordena los resultados en orden descendente
     sorted_data = dict(sorted(salidaVcramer.items(), key=lambda item: item[1], reverse=True))
 
-    # Crea el gráfico de barras horizontales
+    # Crea el gráfico
     plt.figure(figsize=(10, 6))
-    plt.barh(list(sorted_data.keys()), list(sorted_data.values()), color='skyblue')
+    bars = plt.barh(list(sorted_data.keys()), list(sorted_data.values()), color='skyblue')
+
+    # Etiquetas encima de cada barra
+    for bar, value in zip(bars, sorted_data.values()):
+        plt.text(value,                                # posición x = final de la barra
+                 bar.get_y() + bar.get_height() / 2,   # posición y = centro vertical de la barra
+                 f"{value:.3f}",                       # valor con 3 decimales
+                 ha='center', va='bottom', fontsize=8, color='black')
+
     plt.xlabel('V de Cramer')
-    plt.xticks(fontsize=8)  # Reduce el tamaño de las etiquetas del eje X
-    plt.yticks(fontsize=8)  # Reduce el tamaño de las etiquetas del eje Y
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
+    plt.title("Asociación (V de Cramer) con Target", fontsize=12)
+    plt.tight_layout()
     plt.show()
+
+
 
     
 def mosaico_targetbinaria(var, target, nombre_eje):
