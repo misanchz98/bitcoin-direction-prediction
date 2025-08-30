@@ -17,6 +17,129 @@ import math
 
 warnings.filterwarnings("ignore")
 
+def percent_channel(close, low, high):
+    """
+    Calcula la posición relativa del precio de cierre dentro de un canal técnico.
+
+    Este indicador se utiliza para normalizar el valor de cierre (`close`) en función
+    de los límites inferior (`low`) y superior (`high`) del canal, como los canales
+    de Keltner, Donchian o Bollinger.
+
+    Parámetros:
+    ----------
+    close : pd.Series
+        Serie de precios de cierre.
+    low : pd.Series
+        Serie del límite inferior del canal.
+    high : pd.Series
+        Serie del límite superior del canal.
+
+    Retorna:
+    -------
+    pd.Series
+        Serie con los valores normalizados entre 0 y 1, que indican la posición
+        relativa del precio dentro del canal.
+    """
+    return (close - low) / (high - low)
+
+
+def calcular_descriptivos(df):
+    """
+    Calcula estadísticas descriptivas para cada columna numérica de un DataFrame.
+
+    Args:
+        df (DataFrame): El DataFrame que contiene los datos numéricos.
+
+    Returns:
+        DataFrame: Un DataFrame transpuesto con estadísticas como media, desviación estándar,
+                   asimetría, curtosis y rango para cada variable numérica.
+    """
+    # Estadísticas básicas
+    descriptivos = df.describe().T
+
+    # Añadir asimetría, curtosis y rango
+    for col in df.select_dtypes(include=[np.number]).columns:
+        descriptivos.loc[col, "Asimetria"] = df[col].skew()
+        descriptivos.loc[col, "Kurtosis"] = df[col].kurtosis()
+        descriptivos.loc[col, "Rango"] = np.ptp(df[col].dropna().values)
+
+    return descriptivos
+
+def dibujar_matriz_corr(df):
+    """
+    Dibuja un heatmap de la matriz de correlación de un DataFrame.
+
+    Parámetros:
+    - df: DataFrame con las variables a analizar.
+    - title: Título del gráfico.
+    - figsize: Tupla (ancho, alto). Si es None, se ajusta automáticamente según número de variables.
+    - annot_size: Tamaño de los números dentro de cada celda.
+    """
+
+    # Calcular matriz de correlación
+    corr_matrix = df.corr()
+
+    plt.figure(figsize=(10, 18))  # tamaño adecuado para menos variables
+    
+    sns.heatmap(
+        corr_matrix,
+        cmap='coolwarm',          # colores azul-rojo
+        center=0,                 # centro en 0
+        annot=True,               # mostrar los números
+        fmt=".2f",                # 2 decimales
+        square=True,
+        linewidths=.5,
+        cbar=False
+    )
+    
+    plt.xticks(rotation=90, fontsize=10)  # rotar etiquetas eje X
+    plt.yticks(rotation=0, fontsize=10)
+    plt.tight_layout()
+    plt.show()
+
+# Representacion de la variabilidad explicada (Método del codo):   
+def plot_varianza_explicada(var_explicada, n_components):
+    """
+    Representa la variabilidad explicada por cada componente principal
+    Args:
+      var_explicada (array): Un array que contiene el porcentaje de varianza explicada
+        por cada componente principal. Generalmente calculado como
+        var_explicada = fit.explained_variance_ratio_ * 100.
+      n_components (int): El número total de componentes principales.
+        Generalmente calculado como fit.n_components.
+    """  
+    # Crear un rango de números de componentes principales de 1 a n_components
+    num_componentes_range = np.arange(1, n_components + 1)
+
+    # Crear una figura de tamaño 8x6
+    plt.figure(figsize=(8, 6))
+
+    # Trazar la varianza explicada en función del número de componentes principales
+    plt.plot(num_componentes_range, var_explicada, marker='o')
+
+    # Etiquetas de los ejes x e y
+    plt.xlabel('Número de Componentes Principales')
+    plt.ylabel('Varianza Explicada')
+
+    # Título del gráfico
+    plt.title('Variabilidad Explicada por Componente Principal')
+
+    # Establecer las marcas en el eje x para que coincidan con el número de componentes
+    plt.xticks(num_componentes_range)
+
+    # Mostrar una cuadrícula en el gráfico
+    plt.grid(True)
+
+    # Agregar barras debajo de cada punto para representar el porcentaje de variabilidad explicada
+    # - 'width': Ancho de las barras de la barra. En este caso, se establece en 0.2 unidades.
+    # - 'align': Alineación de las barras con respecto a los puntos en el eje x. 
+    #   'center' significa que las barras estarán centradas debajo de los puntos.
+    # - 'alpha': Transparencia de las barras. Un valor de 0.7 significa que las barras son 70% transparentes.
+    plt.bar(num_componentes_range, var_explicada, width=0.2, align='center', alpha=0.7)
+
+    # Mostrar el gráfico
+    plt.show()
+
 def curva_roc(x_test_modelo, y_test, modelo):
     """
     Calcula la curva ROC y muestra la gráfica.
