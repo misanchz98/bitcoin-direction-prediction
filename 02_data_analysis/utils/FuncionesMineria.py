@@ -425,18 +425,18 @@ def Vcramer(v, target):
 def graficoVcramer(matriz, target):
     """
     Genera un gráfico de barras horizontales que muestra el coeficiente V de Cramer
-    entre cada columna de matriz y la variable target, incluyendo el valor numérico encima de la barra.
+    entre cada columna de 'matriz' y la variable 'target', incluyendo el valor numérico encima de cada barra.
 
-    Datos de entrada:
+    Parámetros:
     - matriz: DataFrame con las variables a comparar.
     - target: Serie de la variable objetivo (categórica).
 
-    Datos de salida:
+    Salida:
     - Gráfico de barras horizontales con valores de V de Cramer.
     """
 
     # Calcula el coeficiente V de Cramer para cada columna de matriz y target
-    salidaVcramer = {x: Vcramer(matriz[x], target) for x in matriz.columns}
+    salidaVcramer = {col: Vcramer(matriz[col], target) for col in matriz.columns}
 
     # Ordena los resultados en orden descendente
     sorted_data = dict(sorted(salidaVcramer.items(), key=lambda item: item[1], reverse=True))
@@ -445,21 +445,19 @@ def graficoVcramer(matriz, target):
     plt.figure(figsize=(10, 6))
     bars = plt.barh(list(sorted_data.keys()), list(sorted_data.values()), color='skyblue')
 
-    # Etiquetas encima de cada barra
+    # Añade etiquetas encima de cada barra
     for bar, value in zip(bars, sorted_data.values()):
         plt.text(value,                                # posición x = final de la barra
                  bar.get_y() + bar.get_height() / 2,   # posición y = centro vertical de la barra
                  f"{value:.3f}",                       # valor con 3 decimales
-                 ha='center', va='bottom', fontsize=8, color='black')
+                 ha='left', va='center', fontsize=8, color='black')  # alineación mejorada
 
-    plt.xlabel('V de Cramer')
+    plt.xlabel('V de Cramer', fontsize=10)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.title("Asociación (V de Cramer) con Target", fontsize=12)
     plt.tight_layout()
     plt.show()
-
-
 
     
 def mosaico_targetbinaria(var, target, nombre_eje):
