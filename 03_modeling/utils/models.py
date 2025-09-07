@@ -15,7 +15,7 @@ def build_lstm(input_shape, lstm_units=64, dropout=0.2, learning_rate=0.001, **k
     model.compile(
         optimizer=Adam(learning_rate=learning_rate),
         loss="binary_crossentropy",
-        metrics=[tf.keras.metrics.AUC(name="auc")]
+        metrics=["accuracy"]
     )
     return model
 
@@ -31,7 +31,7 @@ def build_gru(input_shape, lstm_units=64, dropout=0.2, learning_rate=0.001, **kw
     model.compile(
         optimizer=Adam(learning_rate=learning_rate),
         loss="binary_crossentropy",
-        metrics=[tf.keras.metrics.AUC(name="auc")]
+        metrics=["accuracy"]
     )
     return model
 
@@ -48,7 +48,7 @@ def build_lstm_cnn(input_shape, lstm_units=32, cnn_filters=32, kernel_size=3, dr
     model.compile(
         optimizer=Adam(learning_rate=learning_rate),
         loss="binary_crossentropy",
-        metrics=[tf.keras.metrics.AUC(name="auc")]
+        metrics=["accuracy"]
     )
     return model
 
@@ -65,6 +65,6 @@ def build_gru_cnn(input_shape, lstm_units=32, cnn_filters=32, kernel_size=3, dro
     model.compile(
         optimizer=Adam(learning_rate=learning_rate),
         loss="binary_crossentropy",
-        metrics=[tf.keras.metrics.AUC(name="auc")]
+        metrics=["accuracy"]
     )
     return model
