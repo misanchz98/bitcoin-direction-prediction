@@ -3,6 +3,7 @@ import pandas as pd
 import itertools as itt
 import numbers
 from collections.abc import Iterable
+from typing import Tuple
 from abc import ABC, abstractmethod
 
 class BaseTimeSeriesCrossValidator:
