@@ -12,7 +12,6 @@ from utils.general import (
     plot_model_comparison
 )
 
-
 from utils.random_search import TimeSeriesRandomSearchCV
 from utils.cross_validation import PurgedWalkForwardCV
 
