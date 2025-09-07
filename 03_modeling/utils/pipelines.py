@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -8,8 +7,7 @@ import matplotlib.pyplot as plt
 
 from utils.general import (
     create_windows_multivariate_np,
-    evaluate_metrics,
-    plot_model_comparison
+    evaluate_metrics
 )
 
 from utils.random_search import TimeSeriesRandomSearchCV
@@ -19,6 +17,48 @@ from utils.cross_validation import PurgedWalkForwardCV
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def plot_model_comparison(results_df, metric="sharpe", strategy="longonly", figsize=(10, 8)):
+    """
+    Grafica un único boxplot comparando los modelos seleccionados y agrega
+    una tabla resumen con mean ± std para cada modelo.
+    """
+    # Filtrar por estrategia
+    df_strat = results_df[results_df["strategy"] == strategy]
+    
+    data = []
+    labels = []
+    summary_rows = []
+    
+    for model in df_strat["model"].unique():
+        model_data = df_strat[df_strat["model"] == model][metric].values
+        if len(model_data) > 0:
+            data.append(model_data)
+            labels.append(model)
+            summary_rows.append([model, f"{np.mean(model_data):.4f}", f"{np.std(model_data):.4f}"])
+    
+    if not data:
+        print(f"No hay datos para la estrategia {strategy}")
+        return
+    
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.boxplot(data, labels=labels, showmeans=True)
+    ax.set_title(f"Comparación de modelos - Estrategia: {strategy} | Métrica: {metric.upper()}")
+    ax.set_ylabel(metric.title())
+    ax.grid(axis="y", linestyle="--", alpha=0.7)
+    
+    table = plt.table(
+        cellText=summary_rows,
+        colLabels=["Modelo", "Mean", "Std"],
+        cellLoc="center",
+        loc="bottom",
+        bbox=[0, -0.3, 1, 0.2]
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(9)
+    
+    plt.subplots_adjust(left=0.1, bottom=0.25)
+    plt.show()
 
 def run_pipeline_random_search(df, target_col='Target', return_col='Return', 
                                  window_size=30, horizon=1, test_size=0.2,
