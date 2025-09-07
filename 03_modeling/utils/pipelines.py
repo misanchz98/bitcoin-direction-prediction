@@ -6,11 +6,8 @@ import logging
 from typing import List, Dict, Tuple, Optional, Any
 import matplotlib.pyplot as plt
 
-from utils.general import (
-    create_windows_multivariate_np,
-    evaluate_metrics,
-    validate_selected_models
-)
+from utils.general import create_windows_multivariate_np, evaluate_metrics
+
 
 from utils.random_search import TimeSeriesRandomSearchCV
 from utils.cross_validation import PurgedWalkForwardCV
