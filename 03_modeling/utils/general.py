@@ -126,6 +126,7 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: np.ndarray
 # =======================================
 # GRAFICAS
 # =======================================
+# Graficas
 def plot_model_comparison(results_df, metric="sharpe", strategy="longonly", figsize=(10, 8)):
     """
     Grafica un único boxplot comparando los modelos seleccionados y agrega
