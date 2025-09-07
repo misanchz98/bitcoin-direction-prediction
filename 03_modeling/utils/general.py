@@ -42,32 +42,22 @@ def create_windows_multivariate_np(data, target, window_size, horizon=1, shuffle
 # EVALUACIÓN DE MÉTRICAS FINANCIERAS
 # =======================================
 
+# ============================================
+# 1. Función auxiliar: máximo drawdown
+# ============================================
 def calculate_max_drawdown(cumulative_returns: np.ndarray) -> float:
-    """
-    Calcula el máximo drawdown de una serie de retornos acumulados.
-    """
-    if len(cumulative_returns) == 0:
-        return 0.0
-    
     peak = np.maximum.accumulate(cumulative_returns)
-    drawdown = (cumulative_returns - peak) / np.maximum(peak, 1e-8)  # Evitar división por 0
-    return float(np.min(drawdown))
+    drawdown = (cumulative_returns - peak) / peak
+    return float(drawdown.min())
 
-def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: Optional[np.ndarray] = None,
-                     strategy: Optional[str] = None) -> Dict[str, float]:
+# ============================================
+# 2. Evaluar métricas (con strategy)
+# ============================================
+def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: np.ndarray = None,
+                     strategy: str = None) -> dict:
     """
     Evalúa métricas de clasificación y, si se provee returns, métricas SOLO de la estrategia indicada.
-    
-    Args:
-        y_true: Array de etiquetas verdaderas (0 o 1)
-        y_pred: Array de predicciones (0 o 1)
-        returns: Array de retornos asociados a cada predicción
-        strategy: 'longonly', 'longshort', 'shortonly' o None (solo métricas base)
-        
-    Returns:
-        Diccionario plano con métricas base (+ métricas de la estrategia si aplica)
     """
-    # Validaciones
     y_true = np.array(y_true)
     y_pred = np.array(y_pred)
     
@@ -76,7 +66,7 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: Optional[n
     if len(y_true) == 0:
         raise ValueError("Los arrays no pueden estar vacíos")
     
-    # Métricas base
+    # Métricas base de clasificación
     metrics = {
         "accuracy": accuracy_score(y_true, y_pred),
         "precision": precision_score(y_true, y_pred, zero_division=0),
@@ -85,12 +75,13 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: Optional[n
         "mcc": matthews_corrcoef(y_true, y_pred)
     }
     
+    # Métricas financieras solo si hay returns y strategy
     if returns is not None and strategy is not None:
         returns = np.array(returns)
         if len(returns) != len(y_pred):
             raise ValueError("returns debe tener la misma longitud que y_pred")
         
-        # Definir estrategias
+        # Estrategias
         if strategy == "longonly":
             strat_returns = np.where(y_pred == 1, returns, 0)
         elif strategy == "longshort":
@@ -104,7 +95,6 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: Optional[n
             cum_return = float(np.cumsum(strat_returns)[-1])
             mean_return = float(np.mean(strat_returns))
             std_return = float(np.std(strat_returns))
-            
             sharpe = mean_return / std_return * np.sqrt(252) if std_return > 1e-8 else 0.0
             max_dd = calculate_max_drawdown(np.cumsum(strat_returns))
             win_rate = float(np.sum(strat_returns > 0) / len(strat_returns))
@@ -120,7 +110,7 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: Optional[n
                 "cum_return": cum_return,
                 "mean_return": mean_return,
                 "volatility": std_return,
-                "sharpe": float(sharpe),
+                "sharpe": sharpe,
                 "max_drawdown": max_dd,
                 "win_rate": win_rate,
                 "num_trades": num_trades
@@ -133,22 +123,17 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: Optional[n
     
     return metrics
 
-
+# =======================================
+# GRAFICAS
+# =======================================
 def plot_model_comparison(results_df, metric="sharpe", strategy="longonly", figsize=(10, 8)):
     """
     Grafica un único boxplot comparando los modelos seleccionados y agrega
     una tabla resumen con mean ± std para cada modelo.
-    
-    Args:
-        results_df: DataFrame devuelto por evaluate_selected_models
-        metric: métrica a graficar ('sharpe', 'accuracy', 'f1', etc.)
-        strategy: estrategia ('longonly', 'longshort', 'shortonly')
-        figsize: tamaño de la figura
     """
     # Filtrar por estrategia
     df_strat = results_df[results_df["strategy"] == strategy]
     
-    # Preparar datos para boxplot
     data = []
     labels = []
     summary_rows = []
@@ -158,34 +143,27 @@ def plot_model_comparison(results_df, metric="sharpe", strategy="longonly", figs
         if len(model_data) > 0:
             data.append(model_data)
             labels.append(model)
-            
-            mean_val = np.mean(model_data)
-            std_val = np.std(model_data)
-            summary_rows.append([model, f"{mean_val:.4f}", f"{std_val:.4f}"])
+            summary_rows.append([model, f"{np.mean(model_data):.4f}", f"{np.std(model_data):.4f}"])
     
     if not data:
         print(f"No hay datos para la estrategia {strategy}")
         return
     
-    # Crear figura
     fig, ax = plt.subplots(figsize=figsize)
-    
-    # Boxplot
-    bp = ax.boxplot(data, labels=labels, showmeans=True)
+    ax.boxplot(data, labels=labels, showmeans=True)
     ax.set_title(f"Comparación de modelos - Estrategia: {strategy} | Métrica: {metric.upper()}")
     ax.set_ylabel(metric.title())
     ax.grid(axis="y", linestyle="--", alpha=0.7)
     
-    # Agregar tabla debajo del gráfico
     table = plt.table(
         cellText=summary_rows,
         colLabels=["Modelo", "Mean", "Std"],
         cellLoc="center",
         loc="bottom",
-        bbox=[0, -0.3, 1, 0.2]  # posición debajo
+        bbox=[0, -0.3, 1, 0.2]
     )
     table.auto_set_font_size(False)
     table.set_fontsize(9)
     
-    plt.subplots_adjust(left=0.1, bottom=0.25)  # deja espacio para la tabla
+    plt.subplots_adjust(left=0.1, bottom=0.25)
     plt.show()
