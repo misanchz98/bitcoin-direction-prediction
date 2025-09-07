@@ -8,7 +8,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    matthews_corrcoef
+    roc_auc_score
 )
 
 from utils.general import (
