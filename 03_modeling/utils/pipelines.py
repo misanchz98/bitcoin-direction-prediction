@@ -6,7 +6,7 @@ import logging
 from typing import List, Dict, Tuple, Optional, Any
 import matplotlib.pyplot as plt
 
-from utils.general import create_windows_multivariate_np, evaluate_metrics
+from utils.general import create_windows_multivariate_np, evaluate_metrics, plot_model_comparison
 
 
 from utils.random_search import TimeSeriesRandomSearchCV
@@ -154,4 +154,8 @@ def run_pipeline_evaluate_models(df, models_dict, target_col="Target", return_co
             results.append(metrics)
     
     results_df = pd.DataFrame(results)
+
+    # Gráfico
+    plot_model_comparison(results_df, metric="sharpe", strategy=strategy)
+
     return results_df
