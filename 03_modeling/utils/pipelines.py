@@ -88,7 +88,7 @@ def run_pipeline_random_search(df, target_col='Target', return_col='Return',
     
     return random_search
 
-def pipeline_evaluate_models(df, models_dict, target_col="Target", return_col="Return", 
+def run_pipeline_evaluate_models(df, models_dict, target_col="Target", return_col="Return", 
                              window_size=30, horizon=1, strategy="longonly", cv_params=None):
     """
     Evalúa un conjunto de modelos seleccionados usando Purged Walk-Forward CV 
