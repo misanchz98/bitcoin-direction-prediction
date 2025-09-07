@@ -99,7 +99,7 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: np.ndarray
         "precision": precision_score(y_true, y_pred, zero_division=0),
         "recall": recall_score(y_true, y_pred, zero_division=0),
         "f1": f1_score(y_true, y_pred, zero_division=0),
-        "mcc": matthews_corrcoef(y_true, y_pred)
+        "auc": roc_auc_score(y_true, y_pred)
     }
     
     # Métricas financieras solo si hay returns y strategy
@@ -120,32 +120,21 @@ def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: np.ndarray
         
         if len(strat_returns) > 0:
             cum_return = float(np.cumsum(strat_returns)[-1])
-            mean_return = float(np.mean(strat_returns))
             std_return = float(np.std(strat_returns))
+            mean_return = float(np.mean(strat_returns))
             sharpe = mean_return / std_return * np.sqrt(252) if std_return > 1e-8 else 0.0
             max_dd = calculate_max_drawdown(np.cumsum(strat_returns))
-            win_rate = float(np.sum(strat_returns > 0) / len(strat_returns))
-            
-            if strategy == "longonly":
-                num_trades = int(np.sum(y_pred == 1))
-            elif strategy == "shortonly":
-                num_trades = int(np.sum(y_pred == 0))
-            else:  # longshort
-                num_trades = int(len(y_pred))
             
             metrics.update({
                 "cum_return": cum_return,
-                "mean_return": mean_return,
-                "volatility": std_return,
                 "sharpe": sharpe,
-                "max_drawdown": max_dd,
-                "win_rate": win_rate,
-                "num_trades": num_trades
+                "max_drawdown": max_dd
             })
         else:
             metrics.update({
-                "cum_return": 0.0, "mean_return": 0.0, "volatility": 0.0,
-                "sharpe": 0.0, "max_drawdown": 0.0, "win_rate": 0.0, "num_trades": 0
+                "cum_return": 0.0,
+                "sharpe": 0.0,
+                "max_drawdown": 0.0
             })
     
     return metrics
@@ -237,15 +226,34 @@ def run_pipeline_evaluate_models(df, models_dict, target_col="Target", return_co
             "min_train_splits": 2
         }
     
+    # Validaciones iniciales
+    if df.empty:
+        raise ValueError("DataFrame no puede estar vacío")
+    if target_col not in df.columns or return_col not in df.columns:
+        raise ValueError(f"Columnas {target_col} o {return_col} no encontradas")
+    if not models_dict:
+        raise ValueError("models_dict no puede estar vacío")
+    
     # Features, target y retornos
     feature_cols = [c for c in df.columns if c not in [target_col, return_col]]
+    if not feature_cols:
+        raise ValueError("No hay columnas de features disponibles")
+        
     X_raw = df[feature_cols].values
     y_raw = df[target_col].values
     returns_raw = df[return_col].values
     
+    print(f"Dataset: {len(df)} muestras, {len(feature_cols)} features")
+    
     # Crear secuencias
     X_seq, y_seq = create_windows_multivariate_np(X_raw, y_raw, window_size, horizon)
     returns_seq = returns_raw[window_size + horizon - 1:]
+    
+    print(f"Secuencias creadas: {len(X_seq)} muestras con ventana={window_size}")
+    
+    # Validar que tenemos suficientes datos
+    if len(X_seq) < 100:
+        print(f"Warning: Solo {len(X_seq)} secuencias disponibles, resultados pueden no ser confiables")
     
     # Índices temporales
     seq_indices = df.index[window_size + horizon - 1:]
@@ -260,35 +268,81 @@ def run_pipeline_evaluate_models(df, models_dict, target_col="Target", return_co
     for model_name, model in models_dict.items():
         print(f"\nEvaluando modelo: {model_name}")
         
-        for fold, (train_idx, val_idx) in enumerate(cv.split(X=pd.DataFrame(index=seq_indices), 
-                                                             y=pd.Series(y_seq, index=seq_indices), 
-                                                             pred_times=pred_times, 
-                                                             eval_times=eval_times)):
-            if len(val_idx) < 20 or len(train_idx) < 50:
-                continue
-            
-            X_val, y_val, returns_val = X_seq[val_idx], y_seq[val_idx], returns_seq[val_idx]
-            
-            # Escalar con stats del train
-            scaler = StandardScaler()
-            n_samples, seq_len, n_features = X_seq[train_idx].shape
-            X_train_scaled = scaler.fit_transform(X_seq[train_idx].reshape(-1, n_features)).reshape(n_samples, seq_len, n_features)
-            X_val_scaled = scaler.transform(X_val.reshape(-1, n_features)).reshape(X_val.shape[0], seq_len, n_features)
-            
-            # Predecir
-            y_pred_proba = model.predict(X_val_scaled, verbose=0).ravel()
-            y_pred = (y_pred_proba > 0.5).astype(int)
-            
-            # Evaluar SOLO la estrategia pedida
-            metrics = evaluate_metrics(y_val, y_pred, returns_val, strategy=strategy)
-            metrics["model"] = model_name
-            metrics["fold"] = fold
-            metrics["strategy"] = strategy
-            results.append(metrics)
+        model_results = []
+        valid_folds = 0
+        
+        try:
+            for fold, (train_idx, val_idx) in enumerate(cv.split(X=pd.DataFrame(index=seq_indices), 
+                                                                 y=pd.Series(y_seq, index=seq_indices), 
+                                                                 pred_times=pred_times, 
+                                                                 eval_times=eval_times)):
+                # Validaciones de fold
+                if len(val_idx) < 20:
+                    print(f"  Fold {fold}: Skipping - validación muy pequeña ({len(val_idx)} muestras)")
+                    continue
+                if len(train_idx) < 50:
+                    print(f"  Fold {fold}: Skipping - entrenamiento muy pequeño ({len(train_idx)} muestras)")
+                    continue
+                
+                X_train, X_val = X_seq[train_idx], X_seq[val_idx]
+                y_train, y_val = y_seq[train_idx], y_seq[val_idx]
+                returns_val = returns_seq[val_idx]
+                
+                # Escalar con stats del train
+                scaler = StandardScaler()
+                n_samples, seq_len, n_features = X_train.shape
+                X_train_scaled = scaler.fit_transform(X_train.reshape(-1, n_features)).reshape(n_samples, seq_len, n_features)
+                X_val_scaled = scaler.transform(X_val.reshape(-1, n_features)).reshape(X_val.shape[0], seq_len, n_features)
+                
+                # Predecir
+                y_pred_proba = model.predict(X_val_scaled, verbose=0).ravel()
+                y_pred = (y_pred_proba > 0.5).astype(int)
+                
+                # Validar predicciones
+                if len(np.unique(y_pred)) == 1:
+                    print(f"  Fold {fold}: Warning - modelo predice solo una clase")
+                
+                # Evaluar SOLO la estrategia pedida
+                metrics = evaluate_metrics(y_val, y_pred, returns_val, strategy=strategy)
+                metrics.update({
+                    "model": model_name,
+                    "fold": fold,
+                    "strategy": strategy,
+                    "n_train": len(train_idx),
+                    "n_val": len(val_idx)
+                })
+                
+                model_results.append(metrics)
+                valid_folds += 1
+                
+                print(f"  Fold {fold}: Sharpe={metrics['sharpe']:.3f}, AUC={metrics['auc']:.3f}")
+        
+        except Exception as e:
+            print(f"  Error evaluando {model_name}: {str(e)}")
+            continue
+        
+        if valid_folds == 0:
+            print(f"  Warning: No se pudo evaluar {model_name} en ningún fold")
+        else:
+            print(f"  {model_name}: {valid_folds} folds válidos")
+            results.extend(model_results)
+    
+    if not results:
+        raise ValueError("No se pudieron generar resultados para ningún modelo")
     
     results_df = pd.DataFrame(results)
-
+    
+    # Mostrar resumen
+    print(f"\n=== RESUMEN ===")
+    summary = results_df.groupby('model').agg({
+        'sharpe': ['mean', 'std'],
+        'auc': ['mean', 'std'], 
+        'cum_return': ['mean', 'std'],
+        'max_drawdown': ['mean', 'std']
+    }).round(4)
+    print(summary)
+    
     # Gráfico
     plot_model_comparison(results_df, metric="sharpe", strategy=strategy)
-
+    
     return results_df
