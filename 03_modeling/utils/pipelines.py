@@ -228,5 +228,7 @@ def run_pipeline_evaluate_models(df, models_dict, target_col="Target", return_co
     
     # Gráfico
     plot_model_comparison(results_df, metric="sharpe", strategy=strategy)
+    plot_model_comparison(results_df, metric="f1", strategy=strategy)
+    
     
     return results_df
