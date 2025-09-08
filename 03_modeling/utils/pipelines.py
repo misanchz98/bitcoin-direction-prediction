@@ -3,16 +3,11 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 import logging
 import matplotlib.pyplot as plt
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score
-)
 
 from utils.general import (
-    create_windows_multivariate_np
+    create_windows_multivariate_np,
+    plot_model_comparison,
+    evaluate_metrics
 )
 
 from utils.random_search import TimeSeriesRandomSearchCV
@@ -23,121 +18,6 @@ from utils.cross_validation import PurgedWalkForwardCV
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def plot_model_comparison(results_df, metric="sharpe", strategy="longonly", figsize=(10, 8)):
-    """
-    Grafica un único boxplot comparando los modelos seleccionados y agrega
-    una tabla resumen con mean ± std para cada modelo.
-    """
-    # Filtrar por estrategia
-    df_strat = results_df[results_df["strategy"] == strategy]
-    
-    data = []
-    labels = []
-    summary_rows = []
-    
-    for model in df_strat["model"].unique():
-        model_data = df_strat[df_strat["model"] == model][metric].values
-        if len(model_data) > 0:
-            data.append(model_data)
-            labels.append(model)
-            summary_rows.append([model, f"{np.mean(model_data):.4f}", f"{np.std(model_data):.4f}"])
-    
-    if not data:
-        print(f"No hay datos para la estrategia {strategy}")
-        return
-    
-    fig, ax = plt.subplots(figsize=figsize)
-    ax.boxplot(data, labels=labels, showmeans=True)
-    ax.set_title(f"Comparación de modelos - Estrategia: {strategy} | Métrica: {metric.upper()}")
-    ax.set_ylabel(metric.title())
-    ax.grid(axis="y", linestyle="--", alpha=0.7)
-    
-    table = plt.table(
-        cellText=summary_rows,
-        colLabels=["Modelo", "Mean", "Std"],
-        cellLoc="center",
-        loc="bottom",
-        bbox=[0, -0.3, 1, 0.2]
-    )
-    table.auto_set_font_size(False)
-    table.set_fontsize(9)
-    
-    plt.subplots_adjust(left=0.1, bottom=0.25)
-    plt.show()
-
-# =======================================
-# EVALUACIÓN DE MÉTRICAS FINANCIERAS
-# =======================================
-
-# ============================================
-# 1. Función auxiliar: máximo drawdown
-# ============================================
-def calculate_max_drawdown(cumulative_returns: np.ndarray) -> float:
-    peak = np.maximum.accumulate(cumulative_returns)
-    drawdown = (cumulative_returns - peak) / peak
-    return float(drawdown.min())
-
-# ============================================
-# 2. Evaluar métricas (con strategy)
-# ============================================
-def evaluate_metrics(y_true: np.ndarray, y_pred: np.ndarray, returns: np.ndarray = None,
-                     strategy: str = None) -> dict:
-    """
-    Evalúa métricas de clasificación y, si se provee returns, métricas SOLO de la estrategia indicada.
-    """
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    
-    if len(y_true) != len(y_pred):
-        raise ValueError("y_true y y_pred deben tener la misma longitud")
-    if len(y_true) == 0:
-        raise ValueError("Los arrays no pueden estar vacíos")
-    
-    # Métricas base de clasificación
-    metrics = {
-        "accuracy": accuracy_score(y_true, y_pred),
-        "precision": precision_score(y_true, y_pred, zero_division=0),
-        "recall": recall_score(y_true, y_pred, zero_division=0),
-        "f1": f1_score(y_true, y_pred, zero_division=0),
-        "auc": roc_auc_score(y_true, y_pred)
-    }
-    
-    # Métricas financieras solo si hay returns y strategy
-    if returns is not None and strategy is not None:
-        returns = np.array(returns)
-        if len(returns) != len(y_pred):
-            raise ValueError("returns debe tener la misma longitud que y_pred")
-        
-        # Estrategias
-        if strategy == "longonly":
-            strat_returns = np.where(y_pred == 1, returns, 0)
-        elif strategy == "longshort":
-            strat_returns = np.where(y_pred == 1, returns, -returns)
-        elif strategy == "shortonly":
-            strat_returns = np.where(y_pred == 0, -returns, 0)
-        else:
-            raise ValueError(f"Estrategia no soportada: {strategy}")
-        
-        if len(strat_returns) > 0:
-            cum_return = float(np.cumsum(strat_returns)[-1])
-            std_return = float(np.std(strat_returns))
-            mean_return = float(np.mean(strat_returns))
-            sharpe = mean_return / std_return * np.sqrt(252) if std_return > 1e-8 else 0.0
-            max_dd = calculate_max_drawdown(np.cumsum(strat_returns))
-            
-            metrics.update({
-                "cum_return": cum_return,
-                "sharpe": sharpe,
-                "max_drawdown": max_dd
-            })
-        else:
-            metrics.update({
-                "cum_return": 0.0,
-                "sharpe": 0.0,
-                "max_drawdown": 0.0
-            })
-    
-    return metrics
 
 def run_pipeline_random_search(df, target_col='Target', return_col='Return', 
                                  window_size=30, horizon=1, test_size=0.2,
