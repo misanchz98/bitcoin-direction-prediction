@@ -215,8 +215,12 @@ def run_pipeline_evaluate_models(df, models_dict, target_col="Target", return_co
     # Mostrar resumen
     print(f"\n=== RESUMEN ===")
     summary = results_df.groupby('model').agg({
-        'sharpe': ['mean', 'std'],
+        'accuracy': ['mean', 'std'],
+        'precision': ['mean', 'std'],
+        'recall': ['mean', 'std'],
+        'f1': ['mean', 'std'],    
         'auc': ['mean', 'std'], 
+        'sharpe': ['mean', 'std'],
         'cum_return': ['mean', 'std'],
         'max_drawdown': ['mean', 'std']
     }).round(4)
