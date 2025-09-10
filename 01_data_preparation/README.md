@@ -29,10 +29,10 @@ El repositorio está organizado de la siguiente manera:
 ### 🗂️ Descripción de Archivos
 
 - **`bdc_daily_data.csv`**  
-  Generado por `01_scraper_blockchain.ipynb`. Contiene la información diaria extraída de Blockchain.com.
+  Generado por `01_scraper_blockchain.ipynb`. Contiene la información diaria extraída de *Blockchain.com*.
 
 - **`bdc_info_data.csv`**  
-  Generado por `01_scraper_blockchain.ipynb`. Incluye la descripción de las variables obtenidas de Blockchain.com.
+  Generado por `01_scraper_blockchain.ipynb`. Incluye la descripción de las variables obtenidas de *Blockchain.com*.
 
 - **`btc_historical_data.csv`**  
   Generado por `01_data_preparation.ipynb`. Contiene el **dataset final** con:
