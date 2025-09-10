@@ -24,6 +24,13 @@ bitcoin-direction-prediction/
 └── README.md
 ```
 
-- `01_data_preparation`: Carpeta donde se recopilan los datos diarios de *Bitcoin*, se calculan indicadores técnicos y métricas de la *blockchain*, generando finalmente el archivo `btc_historical_data.csv` para la siguiente etapa.
-- `02_data_analysis`: Carpeta donde se realiza el análisis descriptivo y la depuración del conjunto de datos, aplicando transformaciones necesarias para generar el archivo `btc_historical_data_eda.csv`, listo para la modelización.
-- `03_modeling`: Carpeta donde se ajustan y evalúan los modelos LSTM, GRU, CNN+LSTM y CNN+GRU, seleccionando la mejor configuración y generando los resultados de predicción y evaluación para determinar el modelo más eficiente y rentable.
+### 🗂️ Descripción de Carpetas Principales
+
+- **`01_data_preparation`**  
+  Carpeta donde se recopilan los datos diarios de *Bitcoin*, se calculan indicadores técnicos y métricas de la *blockchain*, generando finalmente el archivo `btc_historical_data.csv` para la siguiente etapa.
+
+- **`02_data_analysis`**  
+  Carpeta donde se realiza el análisis descriptivo y la depuración del conjunto de datos, aplicando las transformaciones necesarias para generar el archivo `btc_historical_data_eda.csv`, listo para la modelización.
+
+- **`03_modeling`**  
+  Carpeta donde se ajustan y evalúan los modelos **LSTM**, **GRU**, **CNN+LSTM** y **CNN+GRU**, seleccionando la mejor configuración y generando los resultados de predicción y evaluación para determinar el modelo más eficiente y rentable.
