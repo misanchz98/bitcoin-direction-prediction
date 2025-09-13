@@ -93,8 +93,16 @@ def plot_model_comparison(results_df, metric="sharpe", strategy="longonly", figs
 # 1. Función auxiliar: máximo drawdown
 # ============================================
 def calculate_max_drawdown(cumulative_returns: np.ndarray) -> float:
+    if len(cumulative_returns) == 0:
+        return 0.0
+    
     peak = np.maximum.accumulate(cumulative_returns)
-    drawdown = (cumulative_returns - peak) / peak
+    
+    # Manejar división por cero
+    mask = peak != 0
+    drawdown = np.zeros_like(cumulative_returns)
+    drawdown[mask] = (cumulative_returns[mask] - peak[mask]) / peak[mask]
+    
     return float(drawdown.min())
 
 # ============================================
