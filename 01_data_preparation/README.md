@@ -37,7 +37,7 @@ El repositorio está organizado de la siguiente manera:
   - Métricas *on-chain*  
   Este archivo se utiliza como base en la fase de análisis (`02_data_analysis.ipynb`).
 
-##### 📁 `blockchain/`
+#### 📁 `blockchain/`
 
 - **`bdc_daily_data.csv`**  
   Generado por `01_scraper_blockchain.ipynb`. Contiene la información diaria extraída de *Blockchain.com*.

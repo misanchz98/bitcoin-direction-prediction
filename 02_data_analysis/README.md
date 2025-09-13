@@ -27,6 +27,8 @@ En esta carpeta se realiza el **análisis descriptivo** de los datos generados e
 - **`btc_historical_data_eda.csv`**  
   Generado por el *notebook* `02_data_analysis.ipynb`. Contiene el **dataset final**, listo para su uso en la fase de modelización y evaluación.
 
+#### 📁 `utils/`
+
 - **`FuncionesMineria.py`**  
   Script de Python que incluye todas las funciones utilizadas en `02_data_analysis.ipynb` para facilitar el análisis de los datos.
 
